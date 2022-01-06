@@ -18,41 +18,65 @@ package komega
 
 import (
 	"context"
-	"time"
 
-	"github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Komega is the root interface that the Matcher implements.
 type Komega interface {
-	KomegaAsync
-	KomegaSync
+	// Get returns a function that fetches a resource and returns the occurring error.
+	// It can be used with gomega.Eventually() like this
+	//   deployment := appsv1.Deployment{ ... }
+	//   gomega.Eventually(k.Get(&deployment)).To(gomega.Succeed())
+	// By calling the returned function directly it can also be used with gomega.Expect(k.Get(...)()).To(...)
+	Get(client.Object) func() error
+
+	// List returns a function that lists resources and returns the occurring error.
+	// It can be used with gomega.Eventually() like this
+	//   deployments := v1.DeploymentList{ ... }
+	//   gomega.Eventually(k.List(&deployments)).To(gomega.Succeed())
+	// By calling the returned function directly it can also be used as gomega.Expect(k.List(...)()).To(...)
+	List(client.ObjectList, ...client.ListOption) func() error
+
+	// Update returns a function that fetches a resource, applies the provided update function and then updates the resource.
+	// It can be used with gomega.Eventually() like this:
+	//   deployment := appsv1.Deployment{ ... }
+	//   gomega.Eventually(k.Update(&deployment, func (o client.Object) {
+	//     deployment.Spec.Replicas = 3
+	//     return &deployment
+	//   })).To(gomega.Scucceed())
+	// By calling the returned function directly it can also be used as gomega.Expect(k.Update(...)()).To(...)
+	Update(client.Object, UpdateFunc, ...client.UpdateOption) func() error
+
+	// UpdateStatus returns a function that fetches a resource, applies the provided update function and then updates the resource's status.
+	// It can be used with gomega.Eventually() like this:
+	//   deployment := appsv1.Deployment{ ... }
+	//   gomega.Eventually(k.Update(&deployment, func (o client.Object) {
+	//     deployment.Status.AvailableReplicas = 1
+	//     return &deployment
+	//   })).To(gomega.Scucceed())
+	// By calling the returned function directly it can also be used as gomega.Expect(k.UpdateStatus(...)()).To(...)
+	UpdateStatus(client.Object, UpdateFunc, ...client.UpdateOption) func() error
+
+	// Object returns a function that fetches a resource and returns the object.
+	// It can be used with gomega.Eventually() like this:
+	//   deployment := appsv1.Deployment{ ... }
+	//   gomega.Eventually(k.Object(&deployment)).To(HaveField("Spec.Replicas", gomega.Equal(pointer.Int32(3))))
+	// By calling the returned function directly it can also be used as gomega.Expect(k.Object(...)()).To(...)
+	Object(client.Object) func() (client.Object, error)
+
+	// ObjectList returns a function that fetches a resource and returns the object.
+	// It can be used with gomega.Eventually() like this:
+	//   deployments := appsv1.DeploymentList{ ... }
+	//   gomega.Eventually(k.ObjectList(&deployments)).To(HaveField("Items", HaveLen(1)))
+	// By calling the returned function directly it can also be used as gomega.Expect(k.ObjectList(...)()).To(...)
+	ObjectList(client.ObjectList, ...client.ListOption) func() (client.ObjectList, error)
+
+	// WithClient returns a copy that uses the given client.
+	WithClient(client.Client) Komega
+	// WithContext returns a copy that uses the given context.
 	WithContext(context.Context) Komega
 }
 
-// KomegaSync is the interface for any sync assertions that
-// the matcher implements.
-type KomegaSync interface {
-	Create(client.Object, ...client.CreateOption) gomega.GomegaAssertion
-	Delete(client.Object, ...client.DeleteOption) gomega.GomegaAssertion
-	WithExtras(...interface{}) KomegaSync
-}
-
-// KomegaAsync is the interface for any async assertions that
-// the matcher implements.
-type KomegaAsync interface {
-	Consistently(runtime.Object, ...client.ListOption) gomega.AsyncAssertion
-	Eventually(runtime.Object, ...client.ListOption) gomega.AsyncAssertion
-	Get(client.Object) gomega.AsyncAssertion
-	List(client.ObjectList, ...client.ListOption) gomega.AsyncAssertion
-	Update(client.Object, UpdateFunc, ...client.UpdateOption) gomega.AsyncAssertion
-	UpdateStatus(client.Object, UpdateFunc, ...client.UpdateOption) gomega.AsyncAssertion
-	WithTimeout(time.Duration) KomegaAsync
-	WithPollInterval(time.Duration) KomegaAsync
-}
-
-// UpdateFunc modifies the object fetched from the API server before sending
-// the update
+// UpdateFunc receives an object and expects a modified version of it to be returned.
 type UpdateFunc func(client.Object) client.Object
