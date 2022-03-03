@@ -88,7 +88,8 @@ func (k *komega) Update(obj client.Object, updateFunc UpdateFunc, opts ...client
 		if err != nil {
 			return err
 		}
-		return k.client.Update(k.context(), updateFunc(obj), opts...)
+		updateFunc()
+		return k.client.Update(k.context(), obj, opts...)
 	}
 }
 
@@ -103,7 +104,8 @@ func (k *komega) UpdateStatus(obj client.Object, updateFunc UpdateFunc, opts ...
 		if err != nil {
 			return err
 		}
-		return k.client.Status().Update(k.context(), updateFunc(obj), opts...)
+		updateFunc()
+		return k.client.Status().Update(k.context(), obj, opts...)
 	}
 }
 

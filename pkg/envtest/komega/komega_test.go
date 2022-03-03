@@ -73,9 +73,8 @@ func TestUpdate(t *testing.T) {
 	updateDeployment := appsv1.Deployment{
 		ObjectMeta: exampleDeployment().ObjectMeta,
 	}
-	g.Eventually(k.Update(&updateDeployment, func(o client.Object) client.Object {
+	g.Eventually(k.Update(&updateDeployment, func() {
 		updateDeployment.Annotations = map[string]string{"updated": "true"}
-		return &updateDeployment
 	})).Should(Succeed())
 
 	fetched := appsv1.Deployment{
@@ -93,9 +92,8 @@ func TestUpdateStatus(t *testing.T) {
 	updateDeployment := appsv1.Deployment{
 		ObjectMeta: exampleDeployment().ObjectMeta,
 	}
-	g.Eventually(k.UpdateStatus(&updateDeployment, func(o client.Object) client.Object {
+	g.Eventually(k.UpdateStatus(&updateDeployment, func() {
 		updateDeployment.Status.AvailableReplicas = 1
-		return &updateDeployment
 	})).Should(Succeed())
 
 	fetched := appsv1.Deployment{

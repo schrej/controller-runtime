@@ -79,4 +79,4 @@ type Komega interface {
 }
 
 // UpdateFunc receives an object and expects a modified version of it to be returned.
-type UpdateFunc func(client.Object) client.Object
+type UpdateFunc func()
